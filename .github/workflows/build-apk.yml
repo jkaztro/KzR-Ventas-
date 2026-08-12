@@ -12,20 +12,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar el codigo del repositorio
-        uses: actions/checkout@v3
+      - name: Descargar codigo del repositorio
+        uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
+      - name: Configurar Java JDK 17
+        uses: actions/setup-java@v4
         with:
-          node-version: 18
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Preparar carpeta de la app
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Preparar carpeta web
         run: |
           mkdir -p www
           cp index.html www/
 
-      - name: Instalar Cordova y construir APK
+      - name: Instalar Cordova y Construir APK
         run: |
           npm install -g cordova
           cordova create appcom com.kzr.ventas KzRVentas
@@ -35,8 +41,8 @@ jobs:
           cordova platform add android
           cordova build android --debug
 
-      - name: Guardar archivo APK ejecutable
-        uses: actions/upload-artifact@v3
+      - name: Subir ejecutable APK
+        uses: actions/upload-artifact@v4
         with:
           name: KzR-Ventas-APK
           path: appcom/platforms/android/app/build/outputs/apk/debug/app-debug.apk
