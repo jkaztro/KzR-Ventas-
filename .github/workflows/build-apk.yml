@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar codigo del repositorio
+      - name: Descargar codigo
         uses: actions/checkout@v4
 
       - name: Configurar Java JDK 17
@@ -51,4 +51,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KzR-Ventas-APK
-          path: appcom/platforms/android/app/build/outputs/apk/debug/*.apk
+          path: 'appcom/platforms/android/app/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
