@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar codigo del repositorio
+      - name: Descargar repositorio
         uses: actions/checkout@v4
 
       - name: Configurar Java JDK 17
@@ -21,31 +21,36 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Node.js 20
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Preparar archivos web y configuracion
+      - name: Instalar Android SDK y Cordova
+        run: |
+          sudo apt-get update
+          npm install -g cordova
+
+      - name: Preparar proyecto y generar APK
         run: |
           mkdir -p www
           cp index.html www/
           if [ -f icon.png ]; then cp icon.png www/; fi
-
-      - name: Instalar Cordova y Construir APK con Icono
-        run: |
-          npm install -g cordova
+          
+          # Crear proyecto Cordova
           cordova create appcom com.kzr.ventas "KzR Ventas"
           cd appcom
           rm -rf www
           cp -r ../www .
-          if [ -f ../config.xml ]; then cp ../config.xml config.xml; fi
-          if [ -f ../icon.png ]; then cp ../icon.png icon.png; fi
-          cordova platform add android
+          
+          # Agregar plataforma Android e instalar dependencias
+          cordova platform add android@12.0.0
+          
+          # Compilar APK en modo debug
           cordova build android --debug
 
-      - name: Subir ejecutable APK
+      - name: Buscar y subir APK generado
         uses: actions/upload-artifact@v4
         with:
           name: KzR-Ventas-APK
-          path: appcom/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          path: appcom/platforms/android/app/build/outputs/apk/debug/*.apk
