@@ -1,0 +1,42 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el codigo del repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Preparar carpeta de la app
+        run: |
+          mkdir -p www
+          cp index.html www/
+
+      - name: Instalar Cordova y construir APK
+        run: |
+          npm install -g cordova
+          cordova create appcom com.kzr.ventas KzRVentas
+          cd appcom
+          rm -rf www
+          cp -r ../www .
+          cordova platform add android
+          cordova build android --debug
+
+      - name: Guardar archivo APK ejecutable
+        uses: actions/upload-artifact@v3
+        with:
+          name: KzR-Ventas-APK
+          path: appcom/platforms/android/app/build/outputs/apk/debug/app-debug.apk
