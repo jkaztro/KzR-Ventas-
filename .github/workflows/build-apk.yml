@@ -26,18 +26,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Preparar carpeta web
+      - name: Preparar archivos web y configuracion
         run: |
           mkdir -p www
           cp index.html www/
+          if [ -f icon.png ]; then cp icon.png www/; fi
 
-      - name: Instalar Cordova y Construir APK
+      - name: Instalar Cordova y Construir APK con Icono
         run: |
           npm install -g cordova
-          cordova create appcom com.kzr.ventas KzRVentas
+          cordova create appcom com.kzr.ventas "KzR Ventas"
           cd appcom
           rm -rf www
           cp -r ../www .
+          if [ -f ../config.xml ]; then cp ../config.xml config.xml; fi
+          if [ -f ../icon.png ]; then cp ../icon.png icon.png; fi
           cordova platform add android
           cordova build android --debug
 
