@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ventas KzR DEMO - Con Carrito Multiproducto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #050510;
+            --bg-card: #0d0d1a;
+            --text-main: #00ffff;
+            --text-title: #ff00ff;
+            --border-color: #ff00ff;
+            --input-bg: #000000;
+            --input-text: #ffffff;
+            --btn-bg: #1a1a30;
+        }
+
+        body.modo-dia {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-title: #92400e;
+            --border-color: #cbd5e1;
+            --input-bg: #f8fafc;
+            --input-text: #1e293b;
+            --btn-bg: #e2e8f0;
+        }
+
+        body {
+            background: var(--bg-body);
+            color: var(--text-main);
+            font-family: monospace;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .btn-neon {
+            background: var(--btn-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .input-dark {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--input-text);
+            padding: 6px;
+            width: 100%;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .modulo-content {
+            display: none;
+        }
+
+        .modulo-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="p-4 max-w-xl mx-auto">
+
+    <!-- Header / Banner y Modo Día/Noche -->
+    <div class="card text-center relative">
+        <button onclick="toggleTema()" class="absolute top-2 right-2 text-xs bg-slate-700 text-white px-2 py-1 rounded">🌙 / ☀️</button>
+        <h1 class="text-xl font-bold" style="color: var(--text-title);">KzR VENTAS (DEMO)</h1>
+        <p class="text-xs">Vendedor: <span class="text-red-500 font-bold">DEMO</span></p>
+        <button onclick="comprarApp()" class="mt-2 text-xs bg-green-700 text-white p-2 rounded w-full">Comprar App Completa ($50.000) - WhatsApp 3052449607</button>
+    </div>
+
+    <!-- Menú de Navegación Modular -->
+    <div class="grid grid-cols-3 gap-2 mb-4">
+        <button onclick="cambiarModulo('stock')" id="btn-mod-stock" class="btn-neon text-xs py-2">📦 Stock</button>
+        <button onclick="cambiarModulo('registradora')" id="btn-mod-registradora" class="btn-neon text-xs py-2" style="opacity: 0.6;">🛒 Ventas</button>
+        <button onclick="cambiarModulo('cierre')" id="btn-mod-cierre" class="btn-neon text-xs py-2" style="opacity: 0.6;">📊 Cierre</button>
+    </div>
+
+    <!-- MÓDULO 1: INVENTARIO / STOCK -->
+    <div id="modulo-stock" class="modulo-content active">
+        <div class="card">
+            <h2 class="font-bold border-b mb-3 pb-1 text-sm" style="border-color: var(--border-color);">📦 Módulo 1: Inventario y Stock (<span id="stock-count">0</span>)</h2>
+            
+            <label class="text-xs">Insumo / Producto:</label>
+            <input type="text" id="p-nombre" placeholder="Ej: Café, Vasos, Pan..." class="input-dark">
+            
+            <label class="text-xs">Presentación:</label>
+            <select id="p-presentacion" class="input-dark">
+                <option value="paquete">Paquete / Lote</option>
+                <option value="unidad">Unidad</option>
+            </select>
+
+            <label class="text-xs">Unidades/Rendimiento total del paquete:</label>
+            <input type="number" id="p-cantidad" placeholder="Ej: 50 tazas, 30 cigarros, 14 sandwiches" class="input-dark" min="1">
+
+            <label class="text-xs">Costo total de compra ($):</label>
+            <input type="number" id="p-val-compra" placeholder="Ej: 20000" class="input-dark">
+
+            <label class="text-xs">Precio de venta unitario ($):</label>
+            <input type="number" id="p-val-venta" placeholder="Ej: 1000" class="input-dark">
+            
+            <button onclick="guardarProducto()" class="btn-neon mt-2" id="btn-guardar-prod">Añadir al Stock</button>
+            <button onclick="cancelarEdicion()" class="btn-neon mt-2 bg-red-900 text-white" id="btn-cancelar-edicion" style="display:none;">Cancelar Edición</button>
+            
+            <div class="mt-4">
+                <h3 class="text-xs font-bold mb-2" style="color: var(--text-title);">Estado Actual del Stock:</h3>
+                <div id="lista-stock" class="space-y-2 text-xs"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÓDULO 2: REGISTRADORA DE VENTAS -->
+    <div id="modulo-registradora" class="modulo-content">
+        <div class="card">
+            <h2 class="font-bold border-b mb-3 pb-1 text-sm" style="border-color: var(--border-color);">🛒 Módulo 2: Registradora (<span id="venta-count">0</span>/5 Ventas)</h2>
+            
+            <!-- Selector de tipo de elemento a agregar -->
+            <label class="text-xs">Tipo de ítem a agregar:</label>
+            <select id="tipo-venta" class="input-dark" onchange="toggleTipoVenta()">
+                <option value="unitario">Producto Unitario</option>
+                <option value="combo">Combo Promocional</option>
+            </select>
+
+            <!-- Venta Unitaria -->
+            <div id="seccion-unitario">
+                <label class="text-xs">Seleccionar Producto Unitario:</label>
+                <select id="sel-prod" class="input-dark">
+                    <option value="">-- Seleccione producto --</option>
+                </select>
+                <label class="text-xs">Cantidad a vender:</label>
+                <input type="number" id="v-cant" placeholder="Cantidad" value="1" min="1" class="input-dark">
+            </div>
+
+            <!-- Venta Combo -->
+            <div id="seccion-combo" style="display:none;">
+                <label class="text-xs">Seleccionar Combo:</label>
+                <select id="sel-combo" class="input-dark" onchange="toggleOpcionCigarrillo()">
+                    <option value="">-- Seleccione un Combo --</option>
+                    <option value="C1">Combo 1: Tinto + Cigarrillo = $2.000</option>
+                    <option value="C2">Combo 2: Tinto + Sandwich = $4.500</option>
+                    <option value="C3">Combo 3: Tinto + Cigarrillo + Sandwich = $5.000</option>
+                </select>
+
+                <div id="seccion-marca-cigarro" style="display:none;">
+                    <label class="text-xs">Marca de Cigarrillo:</label>
+                    <select id="sel-cigarro-marca" class="input-dark">
+                        <option value="lucky">Lucky Strike</option>
+                        <option value="mustang">Mustang</option>
+                    </select>
+                </div>
+
+                <label class="text-xs">Cantidad de combos:</label>
+                <input type="number" id="v-cant-combo" placeholder="Cantidad de combos" value="1" min="1" class="input-dark">
+            </div>
+
+            <button onclick="agregarAlCarrito()" class="btn-neon mt-2" style="background: #2563eb; color: white;">➕ Agregar a la Venta</button>
+
+            <!-- Resumen de la Venta en Curso (Carrito) -->
+            <div class="mt-4 border-t pt-3" style="border-color: var(--border-color);">
+                <h3 class="text-xs font-bold mb-2" style="color: var(--text-title);">🛍️ Ítems en esta venta:</h3>
+                <div id="lista-carrito" class="space-y-1 text-xs mb-3">
+                    <p class="text-gray-400 font-italic">No hay ítems agregados aún.</p>
+                </div>
+                <div class="flex justify-between items-center font-bold text-sm mb-3">
+                    <span>TOTAL VENTA:</span>
+                    <span id="total-carrito-txt" class="text-green-400">$0</span>
+                </div>
+            </div>
+
+            <!-- Datos de Pago y Confirmación -->
+            <div class="border-t pt-3" style="border-color: var(--border-color);">
+                <label class="text-xs">Modo de pago:</label>
+                <select id="v-pago" class="input-dark" onchange="toggleEfectivo()">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Virtual">Virtual</option>
+                </select>
+
+                <div id="seccion-efectivo">
+                    <label class="text-xs">Monto recibido del cliente ($):</label>
+                    <input type="number" id="v-paga" placeholder="Monto abonado" class="input-dark">
+                </div>
+
+                <button onclick="finalizarVenta()" class="btn-neon mt-2" style="background: #16a34a; color: white;">🏁 Finalizar y Cobrar Venta</button>
+                <p id="vueltos" class="mt-3 text-center font-bold text-sm" style="color: var(--text-title);"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÓDULO 3: CIERRE DE CAJA -->
+    <div id="modulo-cierre" class="modulo-content">
+        <div class="card text-center">
+            <h2 class="font-bold border-b mb-3 pb-1 text-sm text-left" style="border-color: var(--border-color);">📊 Módulo 3: Cierre de Caja e Informes</h2>
+            <p class="text-xs mb-4 text-left">Genera el reporte consolidado de las ventas del turno, stock final disponible y ganancias netas.</p>
+            
+            <button onclick="generarPDF()" class="btn-neon mb-3" style="background: #1e3a8a; color: white;">📄 Generar Informe PDF de Turno</button>
+            <button onclick="comprarApp()" class="btn-neon" style="border-color: #ff00ff; color: #ff00ff;">📷 Tomar Foto de Pago (Versión Completa)</button>
+        </div>
+    </div>
+
+    <script>
+        let stock = [];
+        let ventas = [];
+        let carrito = []; // Carrito temporal para la venta actual
+        let editandoIndex = null;
+
+        window.onload = function() {
+            stock = [
+                { nombre: "Café (Paquete 50 tazas)", presentacion: "paquete", cantidadUnidades: 50, stockActual: 50, costoCompra: 20000, precioVentaUnitario: 1000 },
+                { nombre: "Vasos Desechables 4oz (Paquete 50)", presentacion: "paquete", cantidadUnidades: 50, stockActual: 50, costoCompra: 5000, precioVentaUnitario: 100 },
+                { nombre: "Cigarrillos Lucky (Cajetilla 30 unids)", presentacion: "paquete", cantidadUnidades: 30, stockActual: 30, costoCompra: 15000, precioVentaUnitario: 1500 },
+                { nombre: "Cigarrillos Mustang (Cajetilla 30 unids)", presentacion: "paquete", cantidadUnidades: 30, stockActual: 30, costoCompra: 10000, precioVentaUnitario: 1200 },
+                { nombre: "Pan para Sandwich (Paquete 14 unids)", presentacion: "paquete", cantidadUnidades: 14, stockActual: 14, costoCompra: 14000, precioVentaUnitario: 4000 }
+            ];
+            actualizarUI();
+        };
+
+        function toggleTema() {
+            document.body.classList.toggle('modo-dia');
+        }
+
+        function comprarApp() { 
+            window.open('https://wa.me/573052449607?text=Hola%20Johnny,%20quiero%20comprar%20la%20versión%20completa%20por%20$50.000', '_blank'); 
+        }
+
+        function cambiarModulo(modulo) {
+            document.querySelectorAll('.modulo-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('modulo-' + modulo).classList.add('active');
+            
+            document.getElementById('btn-mod-stock').style.opacity = (modulo === 'stock') ? '1' : '0.6';
+            document.getElementById('btn-mod-registradora').style.opacity = (modulo === 'registradora') ? '1' : '0.6';
+            document.getElementById('btn-mod-cierre').style.opacity = (modulo === 'cierre') ? '1' : '0.6';
+        }
+
+        function toggleTipoVenta() {
+            const tipo = document.getElementById('tipo-venta').value;
+            document.getElementById('seccion-unitario').style.display = (tipo === 'unitario') ? 'block' : 'none';
+            document.getElementById('seccion-combo').style.display = (tipo === 'combo') ? 'block' : 'none';
+        }
+
+        function toggleOpcionCigarrillo() {
+            const comboId = document.getElementById('sel-combo').value;
+            const requiereCigarro = (comboId === 'C1' || comboId === 'C3');
+            document.getElementById('seccion-marca-cigarro').style.display = requiereCigarro ? 'block' : 'none';
+        }
+
+        function guardarProducto() {
+            const nombre = document.getElementById('p-nombre').value;
+            const presentacion = document.getElementById('p-presentacion').value;
+            const cantidadUnidades = parseInt(document.getElementById('p-cantidad').value);
+            const costoCompra = parseFloat(document.getElementById('p-val-compra').value);
+            const precioVentaUnitario = parseFloat(document.getElementById('p-val-venta').value);
+
+            if (!nombre || isNaN(cantidadUnidades) || cantidadUnidades <= 0 || isNaN(costoCompra) || isNaN(precioVentaUnitario)) {
+                alert("Por favor complete todos los campos correctamente.");
+                return;
+            }
+
+            if (editandoIndex === null && stock.length >= 10) {
+                alert("⚠️ Límite DEMO: Solo puedes registrar hasta 10 productos en stock.");
+                comprarApp();
+                return;
+            }
+
+            const productoData = {
+                nombre,
+                presentacion,
+                cantidadUnidades,
+                stockActual: (editandoIndex !== null) ? stock[editandoIndex].stockActual : cantidadUnidades,
+                costoCompra,
+                precioVentaUnitario
+            };
+
+            if (editandoIndex !== null) {
+                const diferenciaUnidades = cantidadUnidades - stock[editandoIndex].cantidadUnidades;
+                productoData.stockActual = Math.max(0, stock[editandoIndex].stockActual + diferenciaUnidades);
+                stock[editandoIndex] = productoData;
+                editandoIndex = null;
+                document.getElementById('btn-guardar-prod').innerText = "Añadir al Stock";
+                document.getElementById('btn-cancelar-edicion').style.display = 'none';
+                alert("¡Ítem actualizado con éxito!");
+            } else {
+                stock.push(productoData);
+                alert("¡Ítem añadido al stock con éxito!");
+            }
+
+            limpiarFormularioStock();
+            actualizarUI();
+        }
+
+        function limpiarFormularioStock() {
+            document.getElementById('p-nombre').value = '';
+            document.getElementById('p-cantidad').value = '';
+            document.getElementById('p-val-compra').value = '';
+            document.getElementById('p-val-venta').value = '';
+            document.getElementById('p-presentacion').value = 'paquete';
+        }
+
+        function editarProducto(index) {
+            const p = stock[index];
+            document.getElementById('p-nombre').value = p.nombre;
+            document.getElementById('p-presentacion').value = p.presentacion;
+            document.getElementById('p-cantidad').value = p.cantidadUnidades;
+            document.getElementById('p-val-compra').value = p.costoCompra;
+            document.getElementById('p-val-venta').value = p.precioVentaUnitario;
+            
+            editandoIndex = index;
+            document.getElementById('btn-guardar-prod').innerText = "Actualizar Producto";
+            document.getElementById('btn-cancelar-edicion').style.display = 'block';
+            cambiarModulo('stock');
+        }
+
+        function cancelarEdicion() {
+            editandoIndex = null;
+            limpiarFormularioStock();
+            document.getElementById('btn-guardar-prod').innerText = "Añadir al Stock";
+            document.getElementById('btn-cancelar-edicion').style.display = 'none';
+        }
+
+        function eliminarProducto(index) {
+            if (confirm("¿Está seguro de eliminar este ítem del stock?")) {
+                stock.splice(index, 1);
+                actualizarUI();
+            }
+        }
+
+        function toggleEfectivo() {
+            const esEfectivo = document.getElementById('v-pago').value === 'Efectivo';
+            document.getElementById('seccion-efectivo').style.display = esEfectivo ? 'block' : 'none';
+        }
+
+        // AGREGAR ÍTEM AL CARRITO DE LA VENTA ACTUAL
+        function agregarAlCarrito() {
+            const tipoVenta = document.getElementById('tipo-venta').value;
+            let itemCarrito = null;
+
+            if (tipoVenta === 'unitario') {
+                const pIdx = document.getElementById('sel-prod').value;
+                const cantVendida = parseInt(document.getElementById('v-cant').value);
+
+                if (pIdx === "" || isNaN(cantVendida) || cantVendida <= 0) {
+                    alert("Seleccione un producto y una cantidad válida.");
+                    return;
+                }
+
+                const prod = stock[pIdx];
+                let costoTotal = 0;
+                let precioTotal = 0;
+                let itemsDesc = [];
+
+                if (prod.nombre.toLowerCase().includes("café")) {
+                    let vasoStock = stock.find(s => s.nombre.toLowerCase().includes("vasos"));
+                    if (!vasoStock || vasoStock.stockActual < cantVendida) {
+                        alert("No hay suficientes vasos desechables de 4oz para preparar los tintos.");
+                        return;
+                    }
+                    if (prod.stockActual < cantVendida) {
+                        alert("Stock insuficiente de café.");
+                        return;
+                    }
+
+                    let costoCafeUnitario = prod.costoCompra / prod.cantidadUnidades;
+                    let costoVasoUnitario = vasoStock.costoCompra / vasoStock.cantidadUnidades;
+                    costoTotal = (costoCafeUnitario + costoVasoUnitario) * cantVendida;
+                    precioTotal = 1000 * cantVendida;
+
+                    itemsDesc.push({ nombre: prod.nombre, cant: cantVendida });
+                    itemsDesc.push({ nombre: vasoStock.nombre, cant: cantVendida });
+
+                    itemCarrito = {
+                        descripcion: `${cantVendida}x Tinto (4oz)`,
+                        precio: precioTotal,
+                        costo: costoTotal,
+                        itemsADescontar: itemsDesc
+                    };
+                } else {
+                    if (prod.stockActual < cantVendida) {
+                        alert(`Stock insuficiente de ${prod.nombre}. Solo quedan ${prod.stockActual} unidades.`);
+                        return;
+                    }
+                    precioTotal = prod.precioVentaUnitario * cantVendida;
+                    costoTotal = (prod.costoCompra / prod.cantidadUnidades) * cantVendida;
+                    itemsDesc.push({ nombre: prod.nombre, cant: cantVendida });
+
+                    itemCarrito = {
+                        descripcion: `${cantVendida}x ${prod.nombre}`,
+                        precio: precioTotal,
+                        costo: costoTotal,
+                        itemsADescontar: itemsDesc
+                    };
+                }
+
+            } else {
+                // Agregar Combo
+                const comboId = document.getElementById('sel-combo').value;
+                const cantCombos = parseInt(document.getElementById('v-cant-combo').value);
+                const marcaCigarro = document.getElementById('sel-cigarro-marca').value;
+
+                if (!comboId || isNaN(cantCombos) || cantCombos <= 0) {
+                    alert("Seleccione un combo y una cantidad válida.");
+                    return;
+                }
+
+                let precioUnitarioCombo = 0;
+                let requerimientos = [];
+                let nombreComboBase = "";
+
+                if (comboId === 'C1') {
+                    precioUnitarioCombo = 2000;
+                    requerimientos = [
+                        { keyword: "café", cant: 1 },
+                        { keyword: "vasos", cant: 1 },
+                        { keyword: marcaCigarro, cant: 1 }
+                    ];
+                    nombreComboBase = `Combo 1 (Tinto + Cigarrillo ${marcaCigarro.toUpperCase()})`;
+                } else if (comboId === 'C2') {
+                    precioUnitarioCombo = 4500;
+                    requerimientos = [
+                        { keyword: "café", cant: 1 },
+                        { keyword: "vasos", cant: 1 },
+                        { keyword: "pan", cant: 1 }
+                    ];
+                    nombreComboBase = "Combo 2 (Tinto + Sandwich)";
+                } else if (comboId === 'C3') {
+                    precioUnitarioCombo = 5000;
+                    requerimientos = [
+                        { keyword: "café", cant: 1 },
+                        { keyword: "vasos", cant: 1 },
+                        { keyword: "pan", cant: 1 },
+                        { keyword: marcaCigarro, cant: 1 }
+                    ];
+                    nombreComboBase = `Combo 3 (Tinto + Sandwich + Cigarrillo ${marcaCigarro.toUpperCase()})`;
+                }
+
+                let costoTotalCombo = 0;
+                let itemsDesc = [];
+
+                for (let req of requerimientos) {
+                    let prodEnStock = stock.find(s => s.nombre.toLowerCase().includes(req.keyword.toLowerCase()));
+                    if (!prodEnStock) {
+                        alert(`Falta registrar en el stock el insumo clave: ${req.keyword}`);
+                        return;
+                    }
+                    let totalInsumoRequerido = req.cant * cantCombos;
+                    if (prodEnStock.stockActual < totalInsumoRequerido) {
+                        alert(`Stock insuficiente de ${prodEnStock.nombre}. Disponibles: ${prodEnStock.stockActual}`);
+                        return;
+                    }
+                    let costoUnitario = prodEnStock.costoCompra / prodEnStock.cantidadUnidades;
+                    costoTotalCombo += costoUnitario * totalInsumoRequerido;
+                    itemsDesc.push({ nombre: prodEnStock.nombre, cant: totalInsumoRequerido });
+                }
+
+                itemCarrito = {
+                    descripcion: `${cantCombos}x ${nombreComboBase}`,
+                    precio: precioUnitarioCombo * cantCombos,
+                    costo: costoTotalCombo,
+                    itemsADescontar: itemsDesc
+                };
+            }
+
+            carrito.push(itemCarrito);
+            actualizarCarritoUI();
+        }
+
+        function removerDelCarrito(index) {
+            carrito.splice(index, 1);
+            actualizarCarritoUI();
+        }
+
+        function actualizarCarritoUI() {
+            const container = document.getElementById('lista-carrito');
+            const totalTxt = document.getElementById('total-carrito-txt');
+
+            if (carrito.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 font-italic">No hay ítems agregados aún.</p>`;
+                totalTxt.innerText = "$0";
+                return;
+            }
+
+            let totalAcc = 0;
+            container.innerHTML = carrito.map((item, i) => {
+                totalAcc += item.precio;
+                return `
+                    <div class="flex justify-between items-center bg-black bg-opacity-30 p-2 border rounded">
+                        <span>${item.descripcion} - $${item.precio.toLocaleString()}</span>
+                        <button onclick="removerDelCarrito(${i})" class="text-red-400 font-bold px-2">❌</button>
+                    </div>
+                `;
+            }).join('');
+
+            totalTxt.innerText = `$${totalAcc.toLocaleString()}`;
+        }
+
+        // FINALIZAR Y COBRAR TODA LA VENTA MULTIPRODUCTO
+        function finalizarVenta() {
+            if (ventas.length >= 5) { 
+                alert("⚠️ Límite DEMO alcanzado: Has completado las 5 ventas permitidas. ¡Adquiere la versión completa por $50.000!"); 
+                comprarApp(); 
+                return; 
+            }
+
+            if (carrito.length === 0) {
+                alert("El carrito de compras está vacío. Agregue productos o combos antes de finalizar.");
+                return;
+            }
+
+            const metodoPago = document.getElementById('v-pago').value;
+            const pagoCon = parseFloat(document.getElementById('v-paga').value);
+
+            let totalVentaConsolidado = carrito.reduce((acc, el) => acc + el.precio, 0);
+            let costoTotalConsolidado = carrito.reduce((acc, el) => acc + el.costo, 0);
+            let gananciaTotalVenta = totalVentaConsolidado - costoTotalConsolidado;
+
+            if (metodoPago === 'Efectivo') {
+                if (isNaN(pagoCon) || pagoCon < totalVentaConsolidado) {
+                    alert("El monto pagado en efectivo debe ser mayor o igual al total de la venta.");
+                    return;
+                }
+                const cambio = pagoCon - totalVentaConsolidado;
+                document.getElementById('vueltos').innerText = `Vueltos a entregar: $${cambio.toLocaleString()}`;
+            } else {
+                document.getElementById('vueltos').innerText = `Pago virtual registrado con éxito`;
+            }
+
+            // Descontar inventario consolidado
+            carrito.forEach(item => {
+                item.itemsADescontar.forEach(desc => {
+                    let pStock = stock.find(s => s.nombre === desc.nombre);
+                    if (pStock) {
+                        pStock.stockActual = Math.max(0, pStock.stockActual - desc.cant);
+                    }
+                });
+            });
+
+            // Resumen de nombres para el historial
+            let resumenNombres = carrito.map(i => i.descripcion).join(" + ");
+
+            ventas.push({ 
+                nombre: resumenNombres, 
+                cant: 1, 
+                total: totalVentaConsolidado, 
+                costo: costoTotalConsolidado, 
+                ganancia: gananciaTotalVenta, 
+                metodo: metodoPago 
+            });
+
+            // Limpiar Carrito
+            carrito = [];
+            actualizarCarritoUI();
+            document.getElementById('v-paga').value = '';
+            document.getElementById('venta-count').innerText = ventas.length;
+            actualizarUI();
+            alert(`¡Venta completada y registrada exitosamente!`);
+        }
+
+        function actualizarUI() {
+            document.getElementById('stock-count').innerText = stock.length;
+            const sel = document.getElementById('sel-prod');
+            sel.innerHTML = '<option value="">-- Seleccione producto --</option>' + 
+                stock.map((p, i) => `<option value="${i}">${p.nombre} (Disponibles: ${p.stockActual})</option>`).join('');
+            
+            const listaStock = document.getElementById('lista-stock');
+            listaStock.innerHTML = stock.map((p, i) => `
+                <div class="p-2 border rounded bg-black bg-opacity-20 mb-2">
+                    <b>${p.nombre}</b> (${p.presentacion})<br>
+                    Stock Disponible: <span class="text-yellow-400 font-bold">${p.stockActual}</span> / ${p.cantidadUnidades} unidades<br>
+                    Costo Total Lote: $${p.costoCompra} | Venta Ref: $${p.precioVentaUnitario}
+                    <div class="mt-2 flex gap-2">
+                        <button onclick="editarProducto(${i})" class="bg-blue-600 text-white px-2 py-1 rounded text-xs">✏️ Modificar</button>
+                        <button onclick="eliminarProducto(${i})" class="bg-red-600 text-white px-2 py-1 rounded text-xs">🗑️ Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function generarPDF() {
+            if (ventas.length === 0) {
+                alert("No hay ventas registradas para generar el informe.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("INFORME DE CIERRE - KzR VENTAS (DEMO)", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Vendedor: DEMO`, 14, 27);
+            doc.text(`Fecha: ${new Date().toLocaleString()}`, 14, 34);
+
+            let y = 45;
+            doc.setFont("helvetica", "bold");
+            doc.text("Resumen de Venta / Combos", 14, y);
+            doc.text("Total Venta", 130, y);
+            doc.text("Ganancia", 165, y);
+            
+            doc.setFont("helvetica", "normal");
+            y += 6;
+            doc.line(14, y, 196, y);
+            y += 8;
+
+            let acumuladoVentas = 0;
+            let acumuladoGanancias = 0;
+
+            ventas.forEach((v) => {
+                let lineasTexto = doc.splitTextToSize(v.nombre, 110);
+                doc.text(lineasTexto, 14, y);
+                doc.text(`$${v.total.toLocaleString()}`, 130, y);
+                doc.text(`$${v.ganancia.toLocaleString()}`, 165, y);
+                
+                acumuladoVentas += v.total;
+                acumuladoGanancias += v.ganancia;
+                
+                y += (lineasTexto.length * 6) + 4;
+            });
+
+            y += 5;
+            doc.line(14, y, 196, y);
+            y += 10;
+
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total Recaudado en Turno: $${acumuladoVentas.toLocaleString()}`, 14, y);
+            y += 7;
+            doc.text(`Total Ganancias Libres: $${acumuladoGanancias.toLocaleString()}`, 14, y);
+
+            y += 15;
+            doc.text("Stock Final y Nivel de Insumos al Cierre:", 14, y);
+            y += 8;
+            
+            doc.setFont("helvetica", "normal");
+            stock.forEach((s) => {
+                let pctRestante = Math.round((s.stockActual / s.cantidadUnidades) * 100);
+                let textoStock = `- ${s.nombre}: ${s.stockActual}/${s.cantidadUnidades} unids (${pctRestante}% restante)`;
+                
+                if (pctRestante <= 10) {
+                    doc.setTextColor(200, 0, 0);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${textoStock}  <-- [CRITICO: STOCK <= 10%]`, 18, y);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont("helvetica", "normal");
+                } else {
+                    doc.text(textoStock, 18, y);
+                }
+                y += 6;
+            });
+
+            doc.save("informe-cierre-demo.pdf");
+        }
+    </script>
+</body>
+</html>
