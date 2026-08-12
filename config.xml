@@ -1,0 +1,13 @@
+<?xml class='1.0' encoding='utf-8'?>
+<widget id="com.kzr.ventas" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>KzR Ventas</name>
+    <description>Sistema de Control de Ventas e Inventario KzR</description>
+    <author email="soporte@kzr.com" href="http://github.com">KzR Team</author>
+    <content src="index.html" />
+    
+    <!-- Configuración del icono personalizado -->
+    <icon src="icon.png" />
+    
+    <preference name="Orientation" value="portrait" />
+    <preference name="Fullscreen" value="false" />
+</widget>
